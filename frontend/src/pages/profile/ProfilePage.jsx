@@ -10,7 +10,8 @@ import { FaLink } from "react-icons/fa"
 import { MdEdit } from "react-icons/md"
 import { useQuery } from "@tanstack/react-query"
 const ProfilePage = () => {
-    //  const {data:authUser, error, isPending} useQuery({queryKey:['authUser']})
+    //  const {data:authUser, error, isPending} useQuery({
+    // : ['authUser']})
     const [coverImg, setCoverImg] = useState(null)
     const [profileImg, setProfileImg] = useState(null)
     const [feedType, setFeedType] = useState('posts')
@@ -42,9 +43,20 @@ const ProfilePage = () => {
     }
     return (
         <>
+                           <div className="avatar left-4 mt-40">
+                        
+                                <div className="w-32 h-32 rounded-full -mt-16 relative group/avatar">
+                        <img src='/avatar-placeholder.png'></img>
+                       
+                        
+                    </div>
+      </div>
+
+
             <div className="flex-[4_4_0] border-r border-gray-700 min-h-screen">
                 {isLoading && <ProfileHeaderSkeleton></ProfileHeaderSkeleton>}
                 {!isLoading && !user && <p className="text-center text-lg mt-4">user not found</p>}
+                
          <div className="flex flex-col">
                     {!isLoading && user && (
                         
@@ -60,16 +72,17 @@ const ProfilePage = () => {
                             </div>
                     <div className="relative group/cover">
                     <div className="absolute top-2 right-2 rounded-full p-2 bg-opacity-75 cursor-pointer opacity-0 group-hover/cover:opacity-100 transition duration-200" onClick={() => coverImgRef.current.click()}>
-                        <MdEdit className="w-5 h-5 text-white"></MdEdit>
+                                    <MdEdit className="w-5 h-5 text-white"></MdEdit>
                     </div>
                     <input type="file" hidden ref={coverImgRef} accept="image/*" onChange={(e)=>handleImgChange(e, 'coverImg')}></input>
                     <input type="file" hidden ref={profileImgRef} accept="image/*" onChange={(e)=>handleImgChange(e, 'profileImg')}></input>
                                 <img src={coverImg || user?.coverImg || '/cover.png'} className="h-52 w-full object-cover"></img>
                             </div>
-                                          <div className="avatar left-4">
+                     <div className="avatar left-4">
                         {/* <img src={coverImg}></img> */}
-                    <div className="w-32 rounded-full -mt-16 relative group/avatar">
+                                <div className="w-32 rounded-full -mt-16 relative group/avatar">
                         <img src={profileImg || user?.profileImg || '/avatars'}></img>
+                       
                         <div className="absolute top-5 right-3 bg-pink-50"  >
                             {isMyProfile && (
                           <>
@@ -177,7 +190,7 @@ const ProfilePage = () => {
                 </div>
             <Posts></Posts>
             </div>
-        </>
+            </>
     )
 }
 export default ProfilePage

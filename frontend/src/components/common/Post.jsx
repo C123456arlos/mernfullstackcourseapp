@@ -8,9 +8,14 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import LoadingSpinner from './LoadingSpinner'
+import { formatPostDate } from '../../utils/date'
 const Post = ({post}) => {
     const [comment, setComment] = useState('')
-    const queryClient=useQueryClient()
+    const queryClient = useQueryClient()
+        const postOwner = post.user
+    const isLiked = post.likes.includes(authUser._id)
+    const isMyPost = authUser._id === post.user._id
+    const formattedDate = formatPostDate(post.createdAt)
     const {data:authUser}= useQuery({queryKey:['authUser']})
     const { mutate: deletePost, isPending:isDeleting } = useMutation({
         mutationFn: async () => {
@@ -63,28 +68,58 @@ const Post = ({post}) => {
             toast.error(error.message)
         }
     })
-    const postOwner = post.user
-    const isLiked = post.likes.includes(authUser._id)
-    const isMyPost = authUser._id === post.user._id
-    const formattedDate = '1h'
-    const isCommenting = false
+    const { mutate: commentPost, isPending: isCommenting } = useMutation({
+        mutationFn: async () => {
+            try {
+                const res = await fetch(`/api/posts/comment/${post._id}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type':'application/json'
+                    },
+                    body:JSON.stringify({text:comment})
+                })
+                const data = await res.json()
+                if (!res.ok) {
+                    throw new Error(data.error || 'something went wrong')
+                }
+                return data
+            } catch (error) {
+                throw new Error(error)
+            }
+         },
+        onSuccess: () => { 
+            toast.success('comment posted successfully')
+            setComment('')
+            queryClient.invalidateQueries({queryKey:['posts']})
+        },
+        onError: (error) => {
+            toast.error(error.message)
+        }
+    })
     const handleDeletePost = () => { 
         deletePost()
     }
     const handlePostComment = (e) => {
         e.preventDefault()
+        commentPost()
+        if (isCommenting) return
+        
     }
     const handleLikePost = () => {
         if(isLiking) return 
         likePost()
     }
-  return (
+   console.log(post.comments, 'comments')
+    return (
+      <>
+
       <div className='flex gap-2 items-start p-4 border-b border-gray-700'>
+                    
           <div className='avatar'>
               <Link to={`/profile/${postOwner.username}`} className='w-8 rounded-full overflow-hidden'>
                   <img src={postOwner.profileImg || '/avatar-placeholder.png'}></img>
               </Link>
-          </div>
+         </div>
           <div className='flex flex-col flex-1'>
               <div className='flex gap-2 items-center justify-between'>
               {/* <div className='flex gap-2 items-center'> */}
@@ -124,37 +159,37 @@ const Post = ({post}) => {
                       <div>{post.text}</div>
                       <img src={post.img}></img>
                   </div> */}
-            <div className='flex justify-between mt-3'>
+                    <div className='flex justify-between mt-3'>
+                        
                   <div className='flex gap-4 items-center justify-between'>
                 <div className='flex gap-1 items-center group cursor-pointer'>
-                      <div className='flex gap-1 items-center cursor-pointer group' onClick={() => document.getElementById('comments_modal' + post?._id).showModal()}>
+                      <div className='flex gap-1 items-center cursor-pointer group' onClick={() => document.getElementById('comments_modal' + post?.comments).showModal()}>
                       {/* <div className='flex gap-1 items-center cursor-pointer group' onClick={() => document.getElementById('comments_modal' + post?.comments).showModal()}> */}
                           <FaRegComment className='w-4 h-4 text-slate-500 group-hover:text-slate-800'></FaRegComment>
                           <span className='text-sm text-slate-500 group-hover:text-sky-400'>{post.comments.length}</span>
                       </div>
                       {/* <dialog id={`comments_modal${post?.comments}`} className='modal border-none'> */}
-                      <dialog id={`comments_modal${post?._id}`} className='modal border-none'>
+                      <dialog id={`comments_modal${post?.comments}`} className='modal border-none'>
                           <div className='modal-box rounded border border-gray-600'>
                               <h3 className='font-bold text-lg mb-4'>comments</h3>
                               <div className='flex flex-col gap-3 max-h-60 overflow-auto'>
                                   {post.comments.length === 0 && (<p className='text-sm text-slate-500'>
                                       no comments yet be the first to comment
                                   </p>)}
-                                  {post.comments.map((comment) => (
-                                      <div key={comment._id} className='flex justify-center'>
-                                          <div className='w-8 rounded-full'>
-                                              <img src={comment.img}></img>
+                                      {post.comments.map((comment) => (
+                                          <div key={comment._id} >
+                                              <div className='avatar'>
+                                              <div className='rounded-full size-8 object-contain'>
+                                                  <img src={comment.user.profilemg || '/avatar-placeholder.png'}></img>
+                                              </div>
+                                                  <span className='flex pl-2 text-gray-400'>{comment.user.fullName}</span>
+                                                  <span className='flex pl-2  text-gray-400'>
+                                                      @{comment.user.username}
+                                                  </span>
+                                              </div>
+                                                  <div className='pt-2'>{comment.text}</div>
                                           </div>
-                                          <div className='flex flex-col'>
-                                              <div className='flex items-center'></div>
-                                              <span className=''></span>
-                                              <span className=''>
-                                                  @{comment.username}
-                                              </span>
-                                          </div>
-                                          <div className='text-sm'></div>
-                                      </div>
-                                  ))}
+                                      ))}
                               </div>
                               <form className='flex gap-2 items-center mt-4 border-t-1' onSubmit={handlePostComment}>
                                <textarea className='textarea w-full p-1 rounded' placeholder='add a comment'
@@ -185,10 +220,11 @@ const Post = ({post}) => {
                 <div className='flex gap-1 items-center group cursor-pointer'>
                       <FaRegBookmark className='w-4 h-4 text-slate-500 cursor-pointer'></FaRegBookmark>
                   </div>       
-                  </div>
+              </div>
+            
                       </div>
               </div>
-         
+      </>   
   )
 }
 
