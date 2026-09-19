@@ -13,7 +13,7 @@ const HomePage = () => {
                           <div className="absolute bottom-0 w-10 h-1 rounded-full bg-primary"></div>
                       )}
                   </div>
-                  <div className="flex justify-center flex-1 p-3 hover:bg-secondary transition duration-200"
+                  <div className="flex justify-center flex-1 p-3 hover:bg-secondary transition duration-200 relative cursor-pointer"
                       onClick={() => setFeedType('following')}>following
                       {feedType === 'following' && (
                           <div className="absolute bottom-0 w-10 h-1 rounded-full bg-primary"></div>
@@ -21,7 +21,7 @@ const HomePage = () => {
                   </div>
               </div>
               <CreatePost></CreatePost>
-              <Posts></Posts>
+              <Posts feedType={feedType}></Posts>
           </div>
     </>
   )
