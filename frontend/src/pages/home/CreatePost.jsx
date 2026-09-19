@@ -25,6 +25,7 @@ const CreatePost = () => {
                 }
                 return data
             } catch (error) {
+                console.error(error.message)
                 throw new Error(error)
             }
         },
@@ -54,7 +55,6 @@ const CreatePost = () => {
             reader.readAsDataURL(file)
         }
     }
-    console.log(img, 'image')
     return (
         <div className='flex p-4 items-start gap-4 border-b border-gray-700'>
             <div className='avatar'>
