@@ -1,5 +1,5 @@
-import { useRef, useState } from "react"
-import { Link } from "react-router-dom"
+import { useEffect, useRef, useState } from "react"
+import { Link, useParams } from "react-router-dom"
 import Posts from "../../components/common/Posts"
 import ProfileHeaderSkeleton from '../../components/skeletons/ProfileHeaderSkeleton'
 import EditProfileModal from './EditProfileModal'
@@ -9,6 +9,7 @@ import { IoCalendarOutline } from "react-icons/io5"
 import { FaLink } from "react-icons/fa"
 import { MdEdit } from "react-icons/md"
 import { useQuery } from "@tanstack/react-query"
+import { formatMemberSinceDate } from "../../utils/date"
 const ProfilePage = () => {
     //  const {data:authUser, error, isPending} useQuery({
     // : ['authUser']})
@@ -17,19 +18,24 @@ const ProfilePage = () => {
     const [feedType, setFeedType] = useState('posts')
     const coverImgRef = useRef(null)
     const profileImgRef = useRef(null)
-    const isLoading = false
+    const { username } = useParams()
     const isMyProfile = true
-    const user = {
-        _id: '1',
-        fullName: 'person',
-        username: 'name',
-        profileImg: '/avatars/boy2.png',
-        coverImg: '/notebook.png',
-        bio: 'lorem ipsum dolor sit amet consectetur',
-        link: 'www.test.com',
-        following: ['1', '2', '3'],
-        followers:['1','2', '3']
-    }
+    const { data: user, isLoading , refetch, isRefetching} = useQuery({
+        queryKey: ['userProfile'],
+        queryFn: async () => {
+            try {
+                const res = await fetch(`/api/users/profile/${username}`)
+                const data = await res.json()
+                if (!res.ok) {
+                    throw new Error(data.error || 'something went wrong')
+                }
+                return data
+            } catch (error) {
+                throw new Error(error)
+            }
+        }
+    })
+    const memeberSinceDate=formatMemberSinceDate(user?.createdAt)
     const handleImgChange = (e, state) => {
         const file = e.target.files[0]
         if (file) {
@@ -41,25 +47,16 @@ const ProfilePage = () => {
             reader.readAsDataURL(file)
         }
     }
+    useEffect(() => {
+        refetch()
+    }, [username, refetch])
     return (
-        <>
-                           <div className="avatar left-4 mt-40">
-                        
-                                <div className="w-32 h-32 rounded-full -mt-16 relative group/avatar">
-                        <img src='/avatar-placeholder.png'></img>
-                       
-                        
-                    </div>
-      </div>
-
-
-            <div className="flex-[4_4_0] border-r border-gray-700 min-h-screen">
-                {isLoading && <ProfileHeaderSkeleton></ProfileHeaderSkeleton>}
-                {!isLoading && !user && <p className="text-center text-lg mt-4">user not found</p>}
+        <>  <div className="flex-[4_4_0] border-r border-gray-700 min-h-screen">
+                {(isLoading || isRefetching) && <ProfileHeaderSkeleton></ProfileHeaderSkeleton>}
+                {!isLoading && !isRefetching && !user && <p className="text-center text-lg mt-4">user not found</p>}
                 
          <div className="flex flex-col">
-                    {!isLoading && user && (
-                        
+                    {!isLoading && !isRefetching && user && (
                         <>
                             <div className="flex gap-10 px-4 py-2 items-center">
                                 <Link to='/'>
@@ -67,7 +64,7 @@ const ProfilePage = () => {
                                 </Link>
                                 <div className="flex flex-col">
                                     <p className="font-bold text-lg">{user?.fullName}</p>
-                                    <span className="text-sm text-slate-500">{POSTS?.length} posts</span>
+                                    <span className="text-sm text-slate-500">{user.followers.length} posts</span>
                                 </div>
                             </div>
                     <div className="relative group/cover">
@@ -156,20 +153,22 @@ const ProfilePage = () => {
                             </div>
                         )}
                         <div className="flex gap-2 items-center">
-                            <IoCalendarOutline className="w-4 h-4 text-slate-900"></IoCalendarOutline>
-                            <span className="text-sm text-slate-500">joined</span>
+                            <IoCalendarOutline className="w-4 h-4 text-slate-500"></IoCalendarOutline>
+                        <span className="text-sm text-slate-500">
+                            {memeberSinceDate}
+                            </span>
 
                         </div>
                     </div>
                     <div className="flex gap-2">
                         <div className="flex gap-1 items-center">
-                            <span className="font-bold text-xs">{user?.followers}</span>
+                            <span className="font-bold text-xs">{user?.followers.length}</span>
                             <span className="text-slate-500 text-xs">followers</span>
                         </div>
                     </div>
                     <div className="flex gap-2">
                         <div className="flex gap-1 items-center">
-                            <span className="font-bold text-xs">{user?.following}</span>
+                            <span className="font-bold text-xs">{user?.following.length}</span>
                             <span className="text-slate-500 text-xs">following</span>
                         </div>
                     </div>
@@ -188,7 +187,9 @@ const ProfilePage = () => {
             )}
         </div>
                 </div>
-            <Posts></Posts>
+            <Posts
+                feedType={feedType}
+                username={username} userId={user?._id}></Posts>
             </div>
             </>
     )
