@@ -4,8 +4,9 @@ import toast from "react-hot-toast"
 
 const EditProfileModal = ({authUser}) => {
     const [formData, setFormData] = useState({
-        fullName: '',username: '',email: '',bio: '',link:'', newPassword:'', currentPassword:''
+        // fullName: '',username: '',email: '',bio: '',link:'', newPassword:'', currentPassword:''
     })
+    
     const queryClient= useQueryClient()
     const { mutate: updateProfile, isPending: isUpdatingProfile } = useMutation({
         mutationFn: async () => {
