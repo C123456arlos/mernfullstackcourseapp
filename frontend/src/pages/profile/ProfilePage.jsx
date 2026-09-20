@@ -3,13 +3,15 @@ import { Link, useParams } from "react-router-dom"
 import Posts from "../../components/common/Posts"
 import ProfileHeaderSkeleton from '../../components/skeletons/ProfileHeaderSkeleton'
 import EditProfileModal from './EditProfileModal'
-import { POSTS } from "../../utils/db/dummy"
-import { FaA, FaArrowLeft } from "react-icons/fa6"
+
+import { FaArrowLeft } from "react-icons/fa6"
 import { IoCalendarOutline } from "react-icons/io5"
 import { FaLink } from "react-icons/fa"
 import { MdEdit } from "react-icons/md"
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatMemberSinceDate } from "../../utils/date"
+import useFollow from '../../hooks/useFollow'
+import toast from "react-hot-toast"
 const ProfilePage = () => {
     //  const {data:authUser, error, isPending} useQuery({
     // : ['authUser']})
@@ -19,7 +21,8 @@ const ProfilePage = () => {
     const coverImgRef = useRef(null)
     const profileImgRef = useRef(null)
     const { username } = useParams()
-    const isMyProfile = true
+    const { follow, isPending } = useFollow()
+    const queryClient= useQueryClient()
     const { data: user, isLoading , refetch, isRefetching} = useQuery({
         queryKey: ['userProfile'],
         queryFn: async () => {
@@ -35,7 +38,42 @@ const ProfilePage = () => {
             }
         }
     })
-    const memeberSinceDate=formatMemberSinceDate(user?.createdAt)
+    const { data: authUser } = useQuery({ queryKey: ['authUser'] })
+    const { mutate: updateProfile, isPending: isUpdatingProfile } = useMutation({
+        mutationFn: async () => {
+            try {
+                const res = await fetch('/api/users/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type':'application/json'
+                    },
+                    body: JSON.stringify({
+                        coverImg, profileImg
+                    })
+                })
+                const data = await res.json()
+                if (!res.ok) {
+                    throw new Error(data.error || 'something went wrong')
+                }
+                return data
+            } catch (error) {
+                throw new Error(error.message)
+            }
+        },
+        onSuccess: () => {
+            toast.success('profile updated successfully')
+            Promise.all([
+                queryClient.invalidateQueries({queryKey:['authUser']}),
+                queryClient.invalidateQueries({queryKey:['userProfile']}),
+            ])
+        },
+        onError: (error) => {
+            toast.error(error.message)
+        }
+    })
+    const isMyProfile = authUser?._id === user?._id
+    const memeberSinceDate = formatMemberSinceDate(user?.createdAt)
+    const amIFollowing= authUser?.following.includes(user?._id)
     const handleImgChange = (e, state) => {
         const file = e.target.files[0]
         if (file) {
@@ -68,28 +106,28 @@ const ProfilePage = () => {
                                 </div>
                             </div>
                     <div className="relative group/cover">
-                    <div className="absolute top-2 right-2 rounded-full p-2 bg-opacity-75 cursor-pointer opacity-0 group-hover/cover:opacity-100 transition duration-200" onClick={() => coverImgRef.current.click()}>
+                            {isMyProfile &&
+                            <div className="absolute top-2 right-2 rounded-full p-2 bg-opacity-75 cursor-pointer opacity-0 group-hover/cover:opacity-100 transition duration-200" onClick={() => coverImgRef.current.click()}>
                                     <MdEdit className="w-5 h-5 text-white"></MdEdit>
-                    </div>
+                                </div>
+                  }
                     <input type="file" hidden ref={coverImgRef} accept="image/*" onChange={(e)=>handleImgChange(e, 'coverImg')}></input>
-                    <input type="file" hidden ref={profileImgRef} accept="image/*" onChange={(e)=>handleImgChange(e, 'profileImg')}></input>
+                  
                                 <img src={coverImg || user?.coverImg || '/cover.png'} className="h-52 w-full object-cover"></img>
-                            </div>
-                     <div className="avatar left-4">
-                        {/* <img src={coverImg}></img> */}
-                                <div className="w-32 rounded-full -mt-16 relative group/avatar">
-                        <img src={profileImg || user?.profileImg || '/avatars'}></img>
-                       
-                        <div className="absolute top-5 right-3 bg-pink-50"  >
-                            {isMyProfile && (
-                          <>
-                                    
-                                <MdEdit className="w-4 h-4 text-gray-800" onClick={() => profileImgRef.current.click()}></MdEdit>
-                          </>
-                            )}
-                        </div>
                     </div>
-        </div>
+                            {isMyProfile && (
+                     <div className="avatar left-4 group/cover">
+                                <div className="w-32 group rounded-full -mt-16 relative group/avatar">
+                        <img src={profileImg || user?.profileImg || '/avatars'}></img>
+                        <div className="absolute top-5 right-3"  >
+                            <div className="absolute top-2 right-2 rounded-full p-2 bg-opacity-75 cursor-pointer opacity-0 group-hover/cover:opacity-100 transition duration-200" onClick={() =>profileImgRef.current.click()}>
+                                    <MdEdit className="w-5 h-5 text-white"></MdEdit>
+                                          <input type="file" hidden ref={profileImgRef} accept="image/*" onChange={(e)=>handleImgChange(e, 'profileImg')}></input>
+                               </div>
+                        </div>
+                                </div>
+                                </div>
+                                    )}
                         </>
 
 
@@ -120,12 +158,18 @@ const ProfilePage = () => {
                     </div>
                 </div> */}
                 <div className="flex justify-end px-4 mt-5">
-                    {isMyProfile && <EditProfileModal></EditProfileModal>}
+                    {isMyProfile && <EditProfileModal authUser={authUser}></EditProfileModal>}
                     {!isMyProfile && (
-                        <button className="btn btn-outline rounded-full btn-sm" onClick={()=>alert('followed successfully')}>follow</button>
+                    <button className="btn btn-outline rounded-full btn-sm" onClick={() => follow(user?._id)}>
+                        {isPending && 'loading'}
+                        {!isPending && amIFollowing && 'unfollow'}
+                        {!isPending && !amIFollowing && 'follow'}
+                        </button>
                     )}
                     {(coverImg || profileImg) && (
-                        <button className="btn btn-primary rounded-full btn-sm" onClick={()=>alert('profile updated successfully')}>update</button>
+                    <button className="btn btn-primary rounded-full btn-sm"
+                        onClick={() => updateProfile()}>
+                        {isUpdatingProfile?'updating':'update'}</button>
                     )}
                 </div>
                 
@@ -145,10 +189,10 @@ const ProfilePage = () => {
                                 <>
                                     <FaLink className="w-3 h-3 text-slate-700"></FaLink>
                                     <a
-                                        // href='/www.test.com'
-                                        // target="_blank"
+                                        href={user?.link}
+                                        target="_blank"
                                         // ref='noreferrer'
-                                        className="text-sm text-gray-800">test.com/@username</a>
+                                    className="text-sm text-gray-800">{user?.link}</a>
                                 </>
                             </div>
                         )}
