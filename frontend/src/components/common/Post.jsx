@@ -109,7 +109,6 @@ const Post = ({post}) => {
         if(isLiking) return 
         likePost()
     }
-   console.log(post.comments, 'comments')
     return (
       <>
 
