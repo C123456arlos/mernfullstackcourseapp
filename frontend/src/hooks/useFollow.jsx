@@ -10,7 +10,7 @@ const useFollow = () => {
             })
             const data = await res.json()
             if (!res.ok) {
-                throw new Error(data.data || 'something went wrong')
+                throw new Error(data.error || 'something went wrong')
             }
             return data
          } catch (error) {
